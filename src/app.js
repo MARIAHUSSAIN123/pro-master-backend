@@ -28,13 +28,6 @@ import notificationRoutes from "./routes/notificationRoutes.js";
 import cronRoutes from "./routes/cronRoutes.js";
 import leadRoutes from "./routes/leadRoutes.js";
 const app = express();
-
-// Spec / production hardening — with the frontend on its own Vercel
-// deployment (and possibly a Hostinger-fronted custom domain), an
-// open cors() would let any website call this API with the user's
-// cookies/token. Set FRONTEND_URL (comma-separated if you have more
-// than one, e.g. a Vercel preview URL + your production domain) in
-// this project's environment variables.
 const allowedOrigins = (process.env.FRONTEND_URL || "")
   .split(",")
   .map((s) => s.trim())
@@ -43,9 +36,7 @@ const allowedOrigins = (process.env.FRONTEND_URL || "")
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow same-origin/non-browser requests (no Origin header —
-      // curl, Postman, server-to-server) and anything in the allowlist.
-      if (!origin || allowedOrigins.length === 0 || allowedOrigins.includes(origin)) {
+    if (!origin || allowedOrigins.length === 0 || allowedOrigins.includes(origin)) {
         return callback(null, true);
       }
       return callback(new Error("Not allowed by CORS"));
