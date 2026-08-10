@@ -5,7 +5,7 @@ import axios from "axios";
 // Production (Vercel): set VITE_API_URL to your deployed backend URL,
 // e.g. https://your-backend.vercel.app/api
 const API = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || "http://localhost:5000/api",
+  baseURL: import.meta.env.VITE_API_URL || "https://pro-master-backend.vercel.app/api",
 });
 
 // Attach the JWT (if we have one) to every request
