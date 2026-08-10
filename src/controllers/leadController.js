@@ -7,6 +7,22 @@ import User from "../models/User.js";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 
+// Wraps a promise so it can never hang the whole request past a fixed
+// limit. This matters specifically on Vercel: if sendBulkNotification
+// or sendEmail (SMTP) stalls — a slow/cold TLS handshake, a rate
+// limit, a flaky network path — the whole serverless function
+// would hang past Vercel's execution timeout with no response ever
+// sent. Vercel's own timeout error has no CORS headers, so the
+// browser reports it as "blocked by CORS policy" even though the
+// real cause is upstream: the function never responded at all.
+const withTimeout = (promise, ms = 5000) =>
+  Promise.race([
+    promise,
+    new Promise((resolve) =>
+      setTimeout(() => resolve({ timedOut: true }), ms)
+    ),
+  ]);
+
 // ======================================
 // Create Lead (PUBLIC — "Get a Free Quote" website form)
 // ======================================
@@ -55,19 +71,21 @@ export const createLead = async (req, res) => {
         role: { $in: ["admin", "manager"] },
       }).select("_id");
 
-      await sendBulkNotification({
-        recipients: staffToNotify.map((u) => u._id),
-        type: "General",
-        title: "New quote request",
-        body: `${lead.fullName} (${lead.email}, ${lead.phone}) submitted a ${
-          lead.customerType
-        } request${
-          lead.serviceInterest ? ` — ${lead.serviceInterest}` : ""
-        }.`,
-        channels: ["InApp", "Email"],
-        relatedModel: null,
-        relatedId: null,
-      });
+      await withTimeout(
+        sendBulkNotification({
+          recipients: staffToNotify.map((u) => u._id),
+          type: "General",
+          title: "New quote request",
+          body: `${lead.fullName} (${lead.email}, ${lead.phone}) submitted a ${
+            lead.customerType
+          } request${
+            lead.serviceInterest ? ` — ${lead.serviceInterest}` : ""
+          }.`,
+          channels: ["InApp", "Email"],
+          relatedModel: null,
+          relatedId: null,
+        })
+      );
     } catch (_) {
       // A failed notification must never block the lead from being
       // saved — the visitor's submission already succeeded above.
@@ -79,16 +97,18 @@ export const createLead = async (req, res) => {
     // too (e.g. a sales team distribution list).
     if (process.env.SALES_NOTIFICATION_EMAIL) {
       try {
-        await sendEmail(
-          process.env.SALES_NOTIFICATION_EMAIL,
-          `New quote request — ${lead.fullName}`,
-          `<p><strong>New lead from the website</strong></p>
-           <p>Name: ${lead.fullName}<br/>
-           Email: ${lead.email}<br/>
-           Phone: ${lead.phone}<br/>
-           Type: ${lead.customerType}<br/>
-           Service interest: ${lead.serviceInterest || "-"}<br/>
-           Message: ${lead.message || "-"}</p>`
+        await withTimeout(
+          sendEmail(
+            process.env.SALES_NOTIFICATION_EMAIL,
+            `New quote request — ${lead.fullName}`,
+            `<p><strong>New lead from the website</strong></p>
+             <p>Name: ${lead.fullName}<br/>
+             Email: ${lead.email}<br/>
+             Phone: ${lead.phone}<br/>
+             Type: ${lead.customerType}<br/>
+             Service interest: ${lead.serviceInterest || "-"}<br/>
+             Message: ${lead.message || "-"}</p>`
+          )
         );
       } catch (_) {
         // A failed notification email must never block lead creation.
