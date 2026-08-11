@@ -12,6 +12,14 @@ import { sendBulkNotification, sendNotification } from "../utils/sendNotificatio
 import sendEmail from "../utils/sendEmail.js";
 import { buildQuotePdf, buildInvoicePdf } from "../utils/pdfDocument.js";
 
+// Where the customer portal lives — used to build a clickable link
+// in the "your quote is ready" email so the customer can get straight
+// to reviewing/paying it instead of guessing a URL.
+const PORTAL_LOGIN_URL = `${
+  (process.env.FRONTEND_URL || "").split(",")[0].trim() ||
+  "http://localhost:5173"
+}/portal/login`;
+
 const QUOTE_POPULATE = [
   { path: "customer" },
   { path: "site" },
@@ -514,10 +522,21 @@ if (!portalUser) {
            <p>Valid until: ${new Date(quote.validUntil).toDateString()}</p>
            <p>Your quote is ready.</p>
 
-<p>
-If you don't have a customer portal account yet,
-please contact Pro Master Cleaning and we will activate your account.
-</p>`
+           <p>
+             <a href="${PORTAL_LOGIN_URL}"
+                style="display:inline-block;padding:12px 24px;background:#0891b2;
+                        color:#ffffff;text-decoration:none;border-radius:8px;
+                        font-weight:600;margin:12px 0;">
+               Log in to review &amp; pay
+             </a>
+           </p>
+           <p style="font-size:13px;color:#64748b;">
+             Or copy this link into your browser: ${PORTAL_LOGIN_URL}
+           </p>
+           <p style="font-size:13px;color:#64748b;">
+             Don't have a password yet? Contact Pro Master Cleaning and
+             we'll activate your account.
+           </p>`
         );
       }
     } catch (emailErr) {
