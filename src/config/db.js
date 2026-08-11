@@ -17,6 +17,15 @@ const connectDB = async () => {
     cached.promise = mongoose
       .connect(process.env.MONGODB_URI, {
         bufferCommands: false,
+        // Vercel's Hobby plan kills a function after ~10 seconds.
+        // Mongoose's default serverSelectionTimeoutMS is 30 seconds,
+        // so a slow/cold Atlas connection would hang past Vercel's
+        // limit with no response ever sent — the browser then reports
+        // that as a CORS error, even though the real cause is this
+        // timeout mismatch. Failing fast here (well under 10s) lets
+        // the handler's catch block actually run and respond.
+        serverSelectionTimeoutMS: 8000,
+        socketTimeoutMS: 20000,
       })
       .then((conn) => {
         console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
