@@ -23,6 +23,14 @@ const withTimeout = (promise, ms = 5000) =>
     ),
   ]);
 
+// Where the customer portal actually lives — used to build a
+// clickable link in emails so people don't have to guess or be told
+// verbally to go type "/portal/login" themselves.
+const PORTAL_LOGIN_URL = `${
+  (process.env.FRONTEND_URL || "").split(",")[0].trim() ||
+  "http://localhost:5173"
+}/portal/login`;
+
 // ======================================
 // Create Lead (PUBLIC — "Get a Free Quote" website form)
 // ======================================
@@ -291,19 +299,33 @@ try {
     // Send portal activation email
  // Send portal activation email
 try {
-  await sendEmail(
-    customer.email,
-    "Welcome to Pro Master Cleaning Customer Portal",
-    `
-    <h2>Welcome ${customer.fullName}</h2>
+  await withTimeout(
+    sendEmail(
+      customer.email,
+      "Welcome to Pro Master Cleaning Customer Portal",
+      `
+      <h2>Welcome ${customer.fullName}</h2>
 
-    <p>Your customer account has been created successfully.</p>
+      <p>Your customer account has been created successfully.</p>
 
-    <p><strong>Email:</strong> ${customer.email}</p>
-    <p><strong>Temporary Password:</strong> ${tempPassword}</p>
+      <p><strong>Email:</strong> ${customer.email}</p>
+      <p><strong>Temporary Password:</strong> ${tempPassword}</p>
 
-    <p>Please login and change your password after your first login.</p>
-    `
+      <p>
+        <a href="${PORTAL_LOGIN_URL}"
+           style="display:inline-block;padding:12px 24px;background:#0891b2;
+                   color:#ffffff;text-decoration:none;border-radius:8px;
+                   font-weight:600;margin:12px 0;">
+          Log in to your account
+        </a>
+      </p>
+      <p style="font-size:13px;color:#64748b;">
+        Or copy this link into your browser: ${PORTAL_LOGIN_URL}
+      </p>
+
+      <p>Please login and change your password after your first login.</p>
+      `
+    )
   );
 } catch (err) {
   console.log("Portal email failed:", err.message);
