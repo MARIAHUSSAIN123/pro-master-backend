@@ -4,26 +4,18 @@ dotenv.config();
 import app from "../src/app.js";
 import connectDB from "../src/config/db.js";
 
+const FRONTEND_ORIGIN =
+  "https://pro-master-frontend-658p.vercel.app";
+
 export default async function handler(req, res) {
-  // Handle CORS preflight request BEFORE database connection
+  // CORS preflight
   if (req.method === "OPTIONS") {
-    const origin = req.headers.origin;
-
-    const allowedOrigins = (process.env.FRONTEND_URL || "")
-      .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean);
-
-    if (origin && allowedOrigins.includes(origin)) {
-      res.setHeader("Access-Control-Allow-Origin", origin);
-      res.setHeader("Access-Control-Allow-Credentials", "true");
-    }
-
+    res.setHeader("Access-Control-Allow-Origin", FRONTEND_ORIGIN);
+    res.setHeader("Access-Control-Allow-Credentials", "true");
     res.setHeader(
       "Access-Control-Allow-Methods",
       "GET,POST,PUT,PATCH,DELETE,OPTIONS"
     );
-
     res.setHeader(
       "Access-Control-Allow-Headers",
       "Content-Type, Authorization"
