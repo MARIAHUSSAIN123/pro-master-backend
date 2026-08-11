@@ -4,64 +4,36 @@ dotenv.config();
 import app from "../src/app.js";
 import connectDB from "../src/config/db.js";
 
-const FRONTEND_ORIGIN =
-  "https://pro-master-frontend-658p.vercel.app";
-
+// Vercel entry point. Vercel's Node.js runtime treats any (req, res)
+// handler exported from a file under /api/ as a serverless function,
+// and Express apps are already valid (req, res) handlers — so we just
+// need to make sure the (cached) DB connection is ready before we
+// hand the request to Express.
+//
+// This is deliberately separate from src/server.js: that file does
+// app.listen() + starts the in-process billing scheduler, neither of
+// which make sense here (Vercel doesn't keep this process alive
+// between requests — see services/recurringBillingScheduler.js and
+// routes/cronRoutes.js for how recurring billing is handled instead
+// on this deployment target).
 export default async function handler(req, res) {
-  // ===============================
-  // CORS PREFLIGHT
-  // ===============================
-
-  if (req.method === "OPTIONS") {
-    res.setHeader(
-      "Access-Control-Allow-Origin",
-      FRONTEND_ORIGIN
-    );
-
-    res.setHeader(
-      "Access-Control-Allow-Credentials",
-      "true"
-    );
-
-    res.setHeader(
-      "Access-Control-Allow-Methods",
-      "GET,POST,PUT,PATCH,DELETE,OPTIONS"
-    );
-
-    res.setHeader(
-      "Access-Control-Allow-Headers",
-      "Content-Type, Authorization"
-    );
-
-    res.setHeader(
-      "Access-Control-Max-Age",
-      "86400"
-    );
-
-    return res.status(204).end();
-  }
-
-  // ===============================
-  // DATABASE CONNECTION
-  // ===============================
-
   try {
     await connectDB();
   } catch (error) {
-    console.error(
-      "Database connection failed:",
-      error.message
-    );
-
+    const origin = req.headers.origin;
+    const allowedOrigins = (process.env.FRONTEND_URL || "")
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (origin && (allowedOrigins.length === 0 || allowedOrigins.includes(origin))) {
+      res.setHeader("Access-Control-Allow-Origin", origin);
+      res.setHeader("Access-Control-Allow-Credentials", "true");
+    }
+    console.error("❌ DB connect failed in handler:", error.message);
     return res.status(500).json({
       success: false,
       message: "Database connection failed.",
     });
   }
-
-  // ===============================
-  // EXPRESS APP
-  // ===============================
-
   return app(req, res);
 }
