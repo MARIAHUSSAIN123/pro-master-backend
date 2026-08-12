@@ -15,7 +15,7 @@ import User from "./src/models/User.js";
 // ⚠️ Change these before running, then you can delete this file
 // (or at least change the password after your first login).
 const ADMIN_NAME = "Ernestine bissou";
-const ADMIN_EMAIL = "Ernestinebissou021@gmail.com";
+const ADMIN_EMAIL = "ernestine.bissou@deluxetravelexpress.com";
 const ADMIN_PASSWORD = "ilovemykids123";
 
 const run = async () => {
